@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+
+# Dataset
+data/
+creditcard.csv
+
+# Model files
+*.pkl
+
+# Database
+*.db
+
+# Mac
+.DS_Store
+
+# Virtual env
+venv/
