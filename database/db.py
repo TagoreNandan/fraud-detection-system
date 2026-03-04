@@ -1,9 +1,11 @@
 import sqlite3
+import csv
 from pathlib import Path
 from datetime import datetime
 
 # Database file stored inside the database folder
 DB_PATH = Path(__file__).resolve().parent / "fraud.db"
+ARCHIVE_DIR = DB_PATH.parent / "archives"
 
 
 def init_db() -> None:
@@ -52,3 +54,42 @@ def save_transaction(
 			(timestamp, float(amount), prediction, float(fraud_probability), device, location)
 		)
 		connection.commit()
+
+
+def archive_transactions() -> str:
+	"""Save all transactions to a CSV file and return the file path."""
+	init_db()
+	ARCHIVE_DIR.mkdir(exist_ok=True)
+	archive_path = ARCHIVE_DIR / f"transactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+	with sqlite3.connect(DB_PATH) as connection:
+		cursor = connection.cursor()
+		cursor.execute("SELECT * FROM transactions")
+		rows = cursor.fetchall()
+		headers = [description[0] for description in cursor.description]
+
+		with open(archive_path, "w", newline="") as csv_file:
+			writer = csv.writer(csv_file)
+			writer.writerow(headers)
+			writer.writerows(rows)
+
+	return str(archive_path)
+
+
+def clear_transactions() -> None:
+	"""Delete all transactions and reset the auto-increment counter."""
+	init_db()
+	with sqlite3.connect(DB_PATH) as connection:
+		cursor = connection.cursor()
+		cursor.execute("DELETE FROM transactions")
+		cursor.execute("DELETE FROM sqlite_sequence WHERE name='transactions'")
+		connection.commit()
+
+
+def reset_transactions(archive: bool = True) -> str:
+	"""Archive transactions (optional) and clear the table. Returns archive path."""
+	archive_path = ""
+	if archive:
+		archive_path = archive_transactions()
+	clear_transactions()
+	return archive_path

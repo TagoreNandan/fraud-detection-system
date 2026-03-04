@@ -9,6 +9,7 @@ from sklearn.metrics import roc_auc_score, classification_report, confusion_matr
 
 from xgboost import XGBClassifier
 
+# Train an XGBoost pipeline for fraud detection and save it as a single file
 print("Loading dataset...")
 
 # Load dataset
@@ -20,10 +21,10 @@ print("Dataset shape:", df.shape)
 X = df.drop("Class", axis=1)
 y = df["Class"]
 
-# Columns to scale
+# Columns to scale (keep scale consistent for Amount and Time)
 scale_columns = ["Amount", "Time"]
 
-# Preprocessor
+# Preprocessor: scale selected columns, pass the rest through unchanged
 preprocessor = ColumnTransformer(
     transformers=[
         ("scaler", StandardScaler(), scale_columns)
@@ -31,7 +32,7 @@ preprocessor = ColumnTransformer(
     remainder="passthrough"
 )
 
-# Create pipeline
+# Create pipeline: preprocessing + XGBoost classifier
 pipeline = Pipeline([
     ("preprocessor", preprocessor),
     ("classifier", XGBClassifier(
@@ -46,7 +47,7 @@ pipeline = Pipeline([
 
 print("Splitting dataset...")
 
-# Train-test split
+# Train-test split (stratified to keep fraud ratio stable)
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, stratify=y, random_state=42
 )
@@ -59,7 +60,7 @@ print("Training pipeline...")
 # Train pipeline
 pipeline.fit(X_train, y_train)
 
-# Evaluate
+# Evaluate using ROC-AUC, confusion matrix, and precision/recall
 y_pred = pipeline.predict(X_test)
 y_proba = pipeline.predict_proba(X_test)[:, 1]
 
@@ -74,7 +75,7 @@ print(confusion_matrix(y_test, y_pred))
 print("\nClassification Report:")
 print(classification_report(y_test, y_pred))
 
-# Save pipeline
+# Save pipeline for API and batch prediction usage
 print("\nSaving pipeline...")
 
 joblib.dump(pipeline, "fraud_pipeline.pkl")
