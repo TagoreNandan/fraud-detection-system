@@ -3,7 +3,9 @@ import requests
 import pandas as pd
 import random
 import sqlite3
+import csv
 from pathlib import Path
+from datetime import datetime
 import joblib
 
 # CONFIG
@@ -38,6 +40,44 @@ def load_recent_transactions(limit: int = 200) -> pd.DataFrame:
             LIMIT ?
         """
         return pd.read_sql_query(query, connection, params=(limit,))
+
+
+def load_transaction_count() -> int:
+    """Load total transaction count from SQLite without any limit."""
+    if not DB_PATH.exists():
+        return 0
+
+    with sqlite3.connect(DB_PATH) as connection:
+        query = "SELECT COUNT(*) as total FROM transactions"
+        result = pd.read_sql_query(query, connection)
+        return int(result.iloc[0]["total"]) if len(result) > 0 else 0
+
+
+def reset_transactions_with_archive() -> str:
+    """Archive all transactions to CSV and clear the table."""
+    if not DB_PATH.exists():
+        return ""
+
+    archive_dir = DB_PATH.parent / "archives"
+    archive_dir.mkdir(exist_ok=True)
+    archive_path = archive_dir / f"transactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+    with sqlite3.connect(DB_PATH) as connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM transactions")
+        rows = cursor.fetchall()
+        headers = [description[0] for description in cursor.description]
+
+        with open(archive_path, "w", newline="") as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerow(headers)
+            writer.writerows(rows)
+
+        cursor.execute("DELETE FROM transactions")
+        cursor.execute("DELETE FROM sqlite_sequence WHERE name='transactions'")
+        connection.commit()
+
+    return str(archive_path)
 
 # SIDEBAR
 st.sidebar.title("🏦 Fraud Detection System")
@@ -107,10 +147,10 @@ if page == "Transaction Simulator":
             st.error("Unexpected error while calling the API.")
             st.stop()
 
+        # Read prediction and SHAP explanation from the API response
         prediction = result.get("prediction")
         probability = result.get("fraud_probability")
-        explanation = result.get("explanation", {})
-        top_risk_factors = explanation.get("top_risk_factors", [])
+        top_risk_factors = result.get("top_risk_factors", [])
 
         if prediction is None or probability is None:
             st.error("API response is missing required fields.")
@@ -157,14 +197,24 @@ if page == "Transaction Simulator":
             for item in top_risk_factors:
                 feature = item.get("feature", "Unknown")
                 impact = item.get("impact", 0.0)
-                st.write(f"- {feature} (impact: {impact:.4f})")
+                st.write(f"{feature} impact: {impact:.4f}")
 
 # PAGE 2 — FRAUD MONITORING DASHBOARD
 elif page == "Fraud Monitoring Dashboard":
 
     st.title("📊 Fraud Monitoring Dashboard")
 
+    # Optional reset so each run can start from zero
+    if st.button("Reset Transactions (Archive)"):
+        archive_path = reset_transactions_with_archive()
+        if archive_path == "":
+            st.info("No database found to reset.")
+        else:
+            st.success(f"Transactions cleared. Archive saved to: {archive_path}")
+        st.rerun()
+
     history = load_recent_transactions()
+    total_count = load_transaction_count()
 
     if len(history) == 0:
 
@@ -172,7 +222,7 @@ elif page == "Fraud Monitoring Dashboard":
 
     else:
 
-        total = len(history)
+        total = total_count
         frauds = len(history[history["prediction"] == "Fraud"])
         legit = total - frauds
 

@@ -12,24 +12,13 @@ import numpy as np
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
 
-from database.db import init_db, save_transaction
+from database.db import init_db, save_transaction, reset_transactions
 
 # Load pipeline (NOT scaler, NOT model separately)
 pipeline = joblib.load(os.path.join(BASE_DIR, "model", "fraud_pipeline.pkl"))
 
-# SHAP explains individual predictions by showing how each feature pushes the
-# model toward Fraud or Legitimate. Explainability builds trust, helps with
-# audits, and makes it easier to debug model behavior in production.
-if hasattr(pipeline, "named_steps"):
-    # Assume the last step is the model, and earlier steps are preprocessing
-    model = pipeline.steps[-1][1]
-    preprocessor = pipeline[:-1]
-else:
-    model = pipeline
-    preprocessor = None
-
-# TreeExplainer works well with XGBoost-style models inside a pipeline
-explainer = shap.TreeExplainer(model)
+# SHAP explainer is created on startup so it is ready for predictions.
+explainer = None
 
 # Create app
 app = FastAPI(title="Fraud Detection API")
@@ -39,9 +28,19 @@ app = FastAPI(title="Fraud Detection API")
 def startup_event():
     # Create the database and table on app startup
     init_db()
+    # Archive old data and reset counts on each API run
+    reset_transactions(archive=True)
+    # Load SHAP explainer once at startup
+    global explainer
+    # Use a small background dataset so SHAP can build a masker
+    background_path = os.path.join(BASE_DIR, "data", "creditcard.csv")
+    background_df = pd.read_csv(background_path).drop("Class", axis=1)
+    background_sample = background_df.sample(n=min(100, len(background_df)), random_state=42)
+    explainer = shap.Explainer(pipeline.predict_proba, background_sample)
 
 
 class Transaction(BaseModel):
+    # Input schema for a single transaction sent to /predict
     Time: float
     Amount: float
     V1: float
@@ -76,32 +75,31 @@ class Transaction(BaseModel):
 
 @app.get("/")
 def home():
+    # Simple health check endpoint
     return {"message": "Fraud Detection API running"}
 
 
 @app.post("/predict")
 def predict(transaction: Transaction):
-
+    # Convert the incoming JSON into a single-row DataFrame
     data = pd.DataFrame([transaction.dict()])
-
+    # Model prediction and fraud probability
     prediction = pipeline.predict(data)[0]
     probability = pipeline.predict_proba(data)[0][1]
 
-    # Prepare data for SHAP (use the same preprocessing as the model)
-    if preprocessor is not None:
-        model_input = preprocessor.transform(data)
-        if hasattr(preprocessor, "get_feature_names_out"):
-            feature_names = preprocessor.get_feature_names_out()
-        else:
-            feature_names = data.columns
-    else:
-        model_input = data
-        feature_names = data.columns
-
     # SHAP values show how each feature contributes to this prediction.
     # This improves transparency for fraud decisions.
-    shap_values = explainer(model_input)
-    values = shap_values.values[0]
+    shap_values = explainer(data)
+    values = shap_values.values
+
+    # If SHAP returns values for both classes, use the Fraud class (index 1)
+    if values.ndim == 3:
+        values = values[0, :, 1]
+    else:
+        values = values[0]
+
+    # SHAP may provide feature names; fall back to input columns if missing.
+    feature_names = shap_values.feature_names if shap_values.feature_names is not None else data.columns
 
     # Pick the top 3 features with the largest absolute impact
     top_indices = np.argsort(np.abs(values))[::-1][:3]
@@ -116,7 +114,7 @@ def predict(transaction: Transaction):
         top_risk_factors.append(
             {
                 "feature": clean_name,
-                "impact": float(values[i])
+                "impact": float(abs(values[i]))
             }
         )
 
@@ -127,10 +125,9 @@ def predict(transaction: Transaction):
         fraud_probability=float(probability)
     )
 
+    # Return prediction and the top SHAP risk factors
     return {
         "prediction": "Fraud" if prediction == 1 else "Legitimate",
         "fraud_probability": float(probability),
-        "explanation": {
-            "top_risk_factors": top_risk_factors
-        }
+        "top_risk_factors": top_risk_factors
     }
