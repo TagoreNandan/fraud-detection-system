@@ -93,3 +93,39 @@ def reset_transactions(archive: bool = True) -> str:
 		archive_path = archive_transactions()
 	clear_transactions()
 	return archive_path
+
+
+def get_recent_transactions(limit: int = 200) -> list[dict]:
+	"""Load recent transactions from SQLite for dashboard metrics."""
+	init_db()
+	with sqlite3.connect(DB_PATH) as connection:
+		connection.row_factory = sqlite3.Row
+		cursor = connection.cursor()
+		cursor.execute(
+			"""
+			SELECT timestamp, amount, prediction, fraud_probability, device, location
+			FROM transactions
+			ORDER BY id DESC
+			LIMIT ?
+			""",
+			(limit,)
+		)
+		return [dict(row) for row in cursor.fetchall()]
+
+
+def get_metrics() -> dict:
+	"""Load total transaction count and fraud count."""
+	init_db()
+	with sqlite3.connect(DB_PATH) as connection:
+		cursor = connection.cursor()
+		cursor.execute("SELECT COUNT(*) FROM transactions")
+		total = cursor.fetchone()[0]
+		
+		cursor.execute("SELECT COUNT(*) FROM transactions WHERE prediction = 'Fraud'")
+		frauds = cursor.fetchone()[0]
+		
+		return {
+			"total_transactions": total,
+			"frauds_detected": frauds,
+			"fraud_rate": (frauds / total) if total > 0 else 0.0
+		}

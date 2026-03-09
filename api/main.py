@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import joblib
 import pandas as pd
@@ -12,7 +14,7 @@ import numpy as np
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
 
-from database.db import init_db, save_transaction, reset_transactions
+from database.db import init_db, save_transaction, reset_transactions, get_recent_transactions, get_metrics
 
 # Load pipeline (NOT scaler, NOT model separately)
 pipeline = joblib.load(os.path.join(BASE_DIR, "model", "fraud_pipeline.pkl"))
@@ -22,6 +24,14 @@ explainer = None
 
 # Create app
 app = FastAPI(title="Fraud Detection API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
@@ -72,11 +82,9 @@ class Transaction(BaseModel):
     V27: float
     V28: float
 
+class BatchTransaction(BaseModel):
+    transactions: list[Transaction]
 
-@app.get("/")
-def home():
-    # Simple health check endpoint
-    return {"message": "Fraud Detection API running"}
 
 
 @app.post("/predict")
@@ -131,3 +139,57 @@ def predict(transaction: Transaction):
         "fraud_probability": float(probability),
         "top_risk_factors": top_risk_factors
     }
+
+@app.get("/transactions")
+def transactions(limit: int = 200):
+    """Return the most recent transactions for the dashboard."""
+    return get_recent_transactions(limit)
+
+@app.get("/metrics")
+def metrics():
+    """Return dashboard metrics."""
+    return get_metrics()
+
+@app.post("/reset")
+def reset():
+    """Clear all transactions from the database."""
+    reset_transactions(archive=False)
+    return {"status": "success", "message": "Database reset to 0 transactions"}
+
+@app.post("/batch-predict")
+def batch_predict(batch: BatchTransaction):
+    """Predict fraud for a list of transactions."""
+    if not batch.transactions:
+        return {"results": []}
+        
+    # Convert list of dicts to DataFrame
+    data = pd.DataFrame([t.dict() for t in batch.transactions])
+    
+    # Batch predict
+    predictions = pipeline.predict(data)
+    probabilities = pipeline.predict_proba(data)[:, 1]
+    
+    results = []
+    for i, t in enumerate(batch.transactions):
+        prediction_label = "Fraud" if predictions[i] == 1 else "Legitimate"
+        prob = float(probabilities[i])
+        
+        # We don't calculate SHAP for batch as it might be too slow
+        
+        # Save to DB
+        save_transaction(
+            amount=t.Amount,
+            prediction=prediction_label,
+            fraud_probability=prob
+        )
+        
+        results.append({
+            "prediction": prediction_label,
+            "fraud_probability": prob,
+        })
+        
+    return {"results": results}
+
+
+# Mount frontend at root (MUST BE AT THE END so it doesn't shadow /predict)
+app.mount("/", StaticFiles(directory=os.path.join(BASE_DIR, "frontend"), html=True), name="frontend")

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Load Phosphor icons for elegant UI accents -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Load Chart.js for dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="background-elements">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <main class="container">
+        <!-- ========================================== -->
+        <!-- HEADER & NAVIGATION                        -->
+        <!-- ========================================== -->
+        <header class="app-header">
+            <h1>Fraud Detection System</h1>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs-container">
+            <button class="tab-btn active" data-target="tab-scorer"><i class="ph ph-crosshair"></i> Scorer</button>
+            <button class="tab-btn" data-target="tab-simulator"><i class="ph ph-play-circle"></i> Simulator</button>
+            <button class="tab-btn" data-target="tab-dashboard"><i class="ph ph-chart-line-up"></i> Dashboard</button>
+            <button class="tab-btn" data-target="tab-batch"><i class="ph ph-files"></i> Batch Upload</button>
+        </nav>
+
+        <!-- ========================================== -->
+        <!-- TAB 1: TRANSACTION SCORER                  -->
+        <!-- ========================================== -->
+        <div class="tab-content" id="tab-scorer" style="display: block;">
+            <div class="app-grid">
+                <!-- Left panel: Form -->
+                <section class="glass-panel form-panel">
+                    <div class="panel-header">
+                        <h2>Transaction Parameters</h2>
+                        <div class="action-buttons">
+                            <button id="btn-sample-legit" class="btn-ghost" type="button"><i
+                                    class="ph ph-check-circle"></i> Legit Sample</button>
+                            <button id="btn-sample-fraud" class="btn-ghost" type="button"><i class="ph ph-warning"></i>
+                                Fraud Sample</button>
+                        </div>
+                    </div>
+
+                    <form id="prediction-form">
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label>Time</label>
+                                <input type="number" step="any" id="Time" name="Time" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Amount ($)</label>
+                                <input type="number" step="any" id="Amount" name="Amount" placeholder="e.g. 149.62"
+                                    required>
+                            </div>
+
+                            <!-- Advanced Features Toggle -->
+                            <button type="button" id="btn-toggle-v" class="btn-ghost"
+                                style="justify-content: center; margin-top: 0.5rem;">
+                                <span id="toggle-v-text">Show Advanced Features (V1-V28)</span>
+                                <i id="toggle-v-icon" class="ph ph-caret-down"></i>
+                            </button>
+
+                            <!-- V1-V28 injected dynamically via JS element #v-features-grid -->
+                            <div id="v-features-grid" class="v-features" style="display: none;"></div>
+                        </div>
+
+                        <button type="submit" class="btn-primary" id="btn-predict">
+                            <span>Analyze Transaction</span>
+                            <i class="ph ph-arrow-right"></i>
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Right panel: Results -->
+                <section class="glass-panel results-panel">
+                    <div class="panel-header">
+                        <h2>Analysis Results</h2>
+                    </div>
+
+                    <div class="results-content" id="results-content">
+                        <div class="empty-state">
+                            <i class="ph ph-radar radar-anim"></i>
+                            <p>Awaiting transaction payload...</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: CONTINUOUS SIMULATOR                -->
+        <!-- ========================================== -->
+        <div class="tab-content" id="tab-simulator" style="display: none;">
+            <section class="glass-panel simulator-panel">
+                <div class="panel-header">
+                    <h2>Continuous Transaction Simulator</h2>
+                    <span class="status-badge stopped" id="sim-status">Stopped</span>
+                </div>
+                <div class="simulator-controls">
+                    <p>Generate random synthethic transactions and send them to the API continuously.</p>
+                    <div class="sim-speed-selector">
+                        <label>Speed Delay:</label>
+                        <select id="sim-speed">
+                            <option value="5000">Slow (5s delay)</option>
+                            <option value="2000" selected>Normal (2s delay)</option>
+                            <option value="500">Fast (0.5s delay)</option>
+                        </select>
+                    </div>
+                    <div class="sim-actions">
+                        <button id="btn-start-sim" class="btn-primary" style="margin-top: 0; width: auto;"><i
+                                class="ph ph-play"></i> Start Simulation</button>
+                        <button id="btn-stop-sim" class="btn-ghost" disabled style="opacity: 0.5;"><i
+                                class="ph ph-stop"></i> Stop</button>
+                    </div>
+                </div>
+                <div class="simulator-log-container">
+                    <h3>Simulation Logs</h3>
+                    <div id="sim-logs" class="sim-logs">
+                        <!-- Logs injected here -->
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: ANALYTICS DASHBOARD                 -->
+        <!-- ========================================== -->
+        <div class="tab-content" id="tab-dashboard" style="display: none;">
+            <div class="dashboard-grid">
+                <section class="glass-panel metric-card">
+                    <i class="ph ph-hash"></i>
+                    <div>
+                        <h3 id="dash-total">0</h3>
+                        <p>Total Transactions</p>
+                    </div>
+                </section>
+                <section class="glass-panel metric-card">
+                    <i class="ph ph-warning-circle fraud-text"></i>
+                    <div>
+                        <h3 id="dash-frauds">0</h3>
+                        <p>Frauds Detected</p>
+                    </div>
+                </section>
+                <section class="glass-panel metric-card">
+                    <i class="ph ph-activity"></i>
+                    <div>
+                        <h3 id="dash-rate">0.00%</h3>
+                        <p>Fraud Rate</p>
+                    </div>
+                </section>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <button id="btn-refresh-dashboard" class="btn-ghost refresh-btn"><i
+                            class="ph ph-arrows-clockwise"></i>
+                        Refresh</button>
+                    <button id="btn-reset-db" class="btn-ghost reset-btn"
+                        style="color: var(--status-fraud); border-color: rgba(239, 68, 68, 0.3);"><i
+                            class="ph ph-trash"></i>
+                        Reset</button>
+                </div>
+            </div>
+
+            <section class="glass-panel chart-panel">
+                <h2>Fraud Probability Over Time</h2>
+                <div class="chart-container">
+                    <canvas id="fraudProbabilityChart"></canvas>
+                </div>
+            </section>
+
+            <section class="glass-panel table-panel">
+                <h2>Recent Transactions</h2>
+                <div class="table-container">
+                    <table id="recent-tx-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Amount</th>
+                                <th>Prediction</th>
+                                <th>Probability</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: BATCH CSV UPLOAD                    -->
+        <!-- ========================================== -->
+        <div class="tab-content" id="tab-batch" style="display: none;">
+            <section class="glass-panel batch-panel">
+                <div class="panel-header">
+                    <h2>Batch CSV Processing</h2>
+                </div>
+                <p>Upload a CSV file containing <code>Time</code>, <code>Amount</code>, and <code>V1</code> to
+                    <code>V28</code> columns.
+                </p>
+                <div class="upload-area" id="drop-zone">
+                    <i class="ph ph-cloud-arrow-up"></i>
+                    <p>Drag and drop CSV file here or <span>browse</span></p>
+                    <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+                </div>
+
+                <div id="batch-progress" class="batch-progress" style="display: none;">
+                    <p id="batch-status-text">Processing...</p>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="batch-progress-fill"></div>
+                    </div>
+                </div>
+
+                <div id="batch-results" class="batch-results" style="display: none;">
+                    <h3>Batch Results Summary</h3>
+                    <div class="batch-summary-grid">
+                        <div class="metric">
+                            <span class="label">Total Processed</span>
+                            <span class="value" id="batch-total">0</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">Frauds Found</span>
+                            <span class="value fraud-text" id="batch-frauds">0</span>
+                        </div>
+                    </div>
+
+                    <table id="batch-results-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Amount</th>
+                                <th>Prediction</th>
+                                <th>Probability</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+    </main>
+    <script src="app.js"></script>
+</body>
+
+</html>
