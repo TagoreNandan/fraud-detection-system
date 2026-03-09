@@ -1,0 +1,8 @@
+id,timestamp,amount,prediction,fraud_probability,device,location
+1,2026-03-05T18:34:48,0.0,Fraud,0.9976159334182739,Unknown,Unknown
+2,2026-03-05T18:38:04,149.62,Legitimate,0.006095262244343758,Unknown,Unknown
+3,2026-03-05T18:38:11,0.0,Fraud,0.9976159334182739,Unknown,Unknown
+4,2026-03-05T18:41:08,149.62,Legitimate,0.006095262244343758,Unknown,Unknown
+5,2026-03-05T18:41:11,0.0,Fraud,0.9976159334182739,Unknown,Unknown
+6,2026-03-05T18:41:20,0.0,Fraud,0.9976159334182739,Unknown,Unknown
+7,2026-03-05T18:41:24,80.0,Fraud,0.9975345134735107,Unknown,Unknown
