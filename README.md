@@ -66,17 +66,6 @@ Run the comparison script:
 cd model
 python compare_models.py
 ```
-
-This saves the ROC chart here:
-```
-reports/model_comparison_roc.png
-```
-
-Add the ROC chart to this README:
-```markdown
-![Model ROC Comparison](reports/model_comparison_roc.png)
-```
-
 Latest comparison results:
 
 | Model | ROC-AUC | Fraud Recall (Class=1) |
