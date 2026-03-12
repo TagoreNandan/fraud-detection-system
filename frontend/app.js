@@ -310,12 +310,12 @@ async function runSimulatorTick(simLogsContainer) {
         const isFraud = data.prediction === 'Fraud';
 
         // Build log HTML
-        const logHtml = `<span>[${timeStr}] Amount: $${amount.toFixed(2)}</span><span>${data.prediction} (${data.fraud_probability.toFixed(2)})</span>`;
+        const logHtml = `<span>[${timeStr}] Amount: ₹${amount.toFixed(2)}</span><span>${data.prediction} (${data.fraud_probability.toFixed(2)})</span>`;
         appendSimulationLog(simLogsContainer, logHtml, isFraud);
 
     } catch (err) {
         // Build error log HTML
-        const logHtml = `<span>[${timeStr}] Amount: $${amount.toFixed(2)}</span><span>Connection Error</span>`;
+        const logHtml = `<span>[${timeStr}] Amount: ₹${amount.toFixed(2)}</span><span>Connection Error</span>`;
         appendSimulationLog(simLogsContainer, logHtml, true);
     }
 }
@@ -369,7 +369,7 @@ function renderDashboardTable(transactions) {
         return `
             <tr>
                 <td>${dateStr}</td>
-                <td>$${t.amount.toFixed(2)}</td>
+                <td>₹${t.amount.toFixed(2)}</td>
                 <td><span class="prob-badge ${isFraud ? 'prob-fraud' : 'prob-legit'}">${t.prediction}</span></td>
                 <td>${(t.fraud_probability * 100).toFixed(2)}%</td>
             </tr>
@@ -602,7 +602,7 @@ function renderBatchTable(inputs, results) {
             html += `
                 <tr>
                     <td>${i + 1}</td>
-                    <td>$${inputs[i].Amount.toFixed(2)}</td>
+                    <td>₹${inputs[i].Amount.toFixed(2)}</td>
                     <td><span class="prob-badge ${isFraud ? 'prob-fraud' : 'prob-legit'}">${r.prediction}</span></td>
                     <td>${(r.fraud_probability * 100).toFixed(2)}%</td>
                 </tr>

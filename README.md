@@ -58,6 +58,33 @@ Metrics from the latest training run:
 	[   14   84]]
   ```
 
+## Model Comparison Experiment
+To compare multiple models fairly, a separate script trains Logistic Regression, Random Forest, and XGBoost using the same train/test split, then plots all ROC curves on one chart.
+
+Run the comparison script:
+```bash
+cd model
+python compare_models.py
+```
+
+This saves the ROC chart here:
+```
+reports/model_comparison_roc.png
+```
+
+Add the ROC chart to this README:
+```markdown
+![Model ROC Comparison](reports/model_comparison_roc.png)
+```
+
+Latest comparison results:
+
+| Model | ROC-AUC | Fraud Recall (Class=1) |
+| --- | --- | --- |
+| Logistic Regression | 0.97 | 0.9184 |
+| Random Forest | 0.96 | 0.7551 |
+| XGBoost | 0.97 | 0.8469 |
+
 ## Dashboard Preview
 ![Dashboard Preview](docs/dashboard_preview.png)
 
