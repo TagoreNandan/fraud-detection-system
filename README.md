@@ -24,17 +24,14 @@ Metrics from the latest training run:
 - ROC-AUC: 0.9732
 - Precision: 0.53
 - Recall: 0.86
-- Confusion Matrix:
-	[[56788   76]
-	[   14   84]]
 
 ## Model Comparison Experiment
 To compare multiple models fairly, a separate script trains Logistic Regression, Random Forest, and XGBoost using the same train/test split, then plots all ROC curves on one chart.
 
 Run the comparison script:
-
+```bash
 python ml/compare_models.py
-
+```
 This saves the ROC chart to reports/roc_comparison.png.
 
 Latest comparison results:
