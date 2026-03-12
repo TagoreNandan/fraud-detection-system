@@ -8,8 +8,8 @@ from .db.database import init_db, reset_transactions
 from .routes.predict import router as predict_router
 from .services.shap_service import get_explainer
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-FRONTEND_DIR = PROJECT_ROOT / "frontend" / "public"
+BASE_DIR = Path(__file__).resolve().parents[2]
+FRONTEND_DIR = BASE_DIR / "frontend" / "public"
 
 app = FastAPI(title="Fraud Detection API")
 
@@ -33,6 +33,11 @@ def startup_event():
 
 
 app.include_router(predict_router)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 # Mount frontend at root (MUST BE AT THE END so it doesn't shadow /predict)
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
