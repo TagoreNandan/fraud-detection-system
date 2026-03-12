@@ -15,7 +15,8 @@ def run_batch_prediction(input_csv: Path, output_csv: Path) -> None:
         data = data.drop(columns=["Class"])
 
     # Load trained pipeline
-    pipeline_path = (Path(__file__).resolve().parent / "fraud_pipeline.pkl").resolve()
+    project_root = Path(__file__).resolve().parents[1]
+    pipeline_path = (project_root / "backend" / "model" / "fraud_pipeline.pkl").resolve()
     pipeline = joblib.load(pipeline_path)
 
     # Predict fraud class and probability
@@ -37,13 +38,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input",
         type=str,
-        default=str(Path(__file__).resolve().parent.parent / "data" / "creditcard.csv"),
+        default=str(Path(__file__).resolve().parents[1] / "data" / "creditcard.csv"),
         help="Path to input CSV file"
     )
     parser.add_argument(
         "--output",
         type=str,
-        default=str(Path(__file__).resolve().parent.parent / "data" / "creditcard_predictions.csv"),
+        default=str(Path(__file__).resolve().parents[1] / "data" / "creditcard_predictions.csv"),
         help="Path to output CSV file"
     )
     args = parser.parse_args()
