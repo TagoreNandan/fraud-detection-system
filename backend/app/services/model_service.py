@@ -1,5 +1,5 @@
 import logging
-import os
+from pathlib import Path
 
 import joblib
 
@@ -8,26 +8,27 @@ logger = logging.getLogger(__name__)
 _pipeline = None
 
 
-def _get_pipeline_path() -> str:
+def _get_pipeline_path() -> Path:
     """Resolve the model path from the current file location."""
-    services_dir = os.path.dirname(os.path.abspath(__file__))
-    app_dir = os.path.dirname(services_dir)
-    backend_dir = os.path.dirname(app_dir)
-    return os.path.join(backend_dir, "model", "fraud_pipeline.pkl")
+    return Path(__file__).resolve().parents[2] / "model" / "fraud_pipeline.pkl"
 
 
 def get_pipeline():
     """Load the trained pipeline once and reuse it for all requests."""
     global _pipeline
-    if _pipeline is None:
-        pipeline_path = _get_pipeline_path()
-        logger.info("Loading model from %s", pipeline_path)
-        try:
-            _pipeline = joblib.load(pipeline_path)
-            logger.info("Model loaded successfully")
-        except FileNotFoundError as exc:
-            logger.error("Model file not found at %s", pipeline_path)
-            raise FileNotFoundError(
-                "Model file not found. Ensure fraud_pipeline.pkl is included in deployment."
-            ) from exc
+    if _pipeline is not None:
+        return _pipeline
+
+    pipeline_path = _get_pipeline_path()
+    if not pipeline_path.exists():
+        logger.error("Model loading failed: missing artifact at %s", pipeline_path)
+        raise RuntimeError("Model artifact missing in deployment")
+
+    logger.info("Loading fraud detection model...")
+    try:
+        _pipeline = joblib.load(pipeline_path)
+        logger.info("Model loaded successfully")
+    except Exception as exc:
+        logger.exception("Model loading failed")
+        raise RuntimeError("Model artifact missing in deployment") from exc
     return _pipeline
