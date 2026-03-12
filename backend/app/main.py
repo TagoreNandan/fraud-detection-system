@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -16,8 +15,6 @@ FRONTEND_DIR = BASE_DIR / "frontend" / "public"
 
 app = FastAPI(title="Fraud Detection API")
 
-PORT = int(os.environ.get("PORT", 8000))
-
 logger = logging.getLogger(__name__)
 
 app.add_middleware(
@@ -31,6 +28,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup_event():
+    print("Startup: initializing services")
     try:
         # Create the database and table on app startup
         init_db()
@@ -40,7 +38,9 @@ def startup_event():
         get_pipeline()
         # Warm the SHAP explainer at startup so it is ready for requests
         get_explainer()
+        print("Startup: initialization complete")
     except Exception:
+        print("Startup: initialization failed; continuing to serve API")
         logger.exception("Startup initialization failed; continuing to serve API")
 
 
@@ -53,13 +53,3 @@ def health():
 
 # Mount frontend at root (MUST BE AT THE END so it doesn't shadow /predict)
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=PORT,
-    )
