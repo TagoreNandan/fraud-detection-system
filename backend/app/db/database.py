@@ -3,9 +3,12 @@ import csv
 from pathlib import Path
 from datetime import datetime
 
-# Database file stored inside the database folder
-DB_PATH = Path(__file__).resolve().parent / "fraud.db"
-ARCHIVE_DIR = DB_PATH.parent / "archives"
+BASE_DIR = Path(__file__).resolve().parents[3]
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+DB_PATH = DATA_DIR / "transactions.db"
+ARCHIVE_DIR = DATA_DIR / "archives"
 
 
 def init_db() -> None:

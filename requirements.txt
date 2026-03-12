@@ -1,12 +1,9 @@
+fastapi
+uvicorn
 pandas
 numpy
 scikit-learn
 xgboost
-fastapi
-uvicorn
-streamlit
-sqlalchemy
 joblib
-matplotlib
-seaborn
 shap
+python-multipart

@@ -127,3 +127,11 @@ fraud-detection-system
 - Docker deployment
 - Cloud deployment (AWS / GCP)
 - Real-time fraud alerting system
+
+## Deploy on Railway
+Push to your Git repo and Railway will auto-deploy using the root Procfile.
+
+Procfile entry:
+```
+web: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+```
