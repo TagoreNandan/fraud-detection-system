@@ -11,7 +11,8 @@ import joblib
 # CONFIG
 API_URL = "http://127.0.0.1:8000/predict"
 API_TIMEOUT_SECONDS = 5
-DB_PATH = (Path(__file__).resolve().parent / ".." / "database" / "fraud.db").resolve()
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DB_PATH = (PROJECT_ROOT / "backend" / "app" / "db" / "fraud.db").resolve()
 
 st.set_page_config(
     page_title="Fraud Detection System",
@@ -22,7 +23,7 @@ st.set_page_config(
 # LOAD DATASET FOR REALISTIC SIMULATION
 @st.cache_data
 def load_data():
-    return pd.read_csv("../data/creditcard.csv")
+    return pd.read_csv(PROJECT_ROOT / "data" / "creditcard.csv")
 
 df = load_data()
 
@@ -303,11 +304,11 @@ elif page == "Batch Fraud Detection":
         # Load local model only when the user chooses local mode
         local_pipeline = None
         if mode == "Local model only":
-            local_pipeline_path = (Path(__file__).resolve().parent / ".." / "model" / "fraud_pipeline.pkl").resolve()
+            local_pipeline_path = (PROJECT_ROOT / "backend" / "model" / "fraud_pipeline.pkl").resolve()
             if local_pipeline_path.exists():
                 local_pipeline = joblib.load(local_pipeline_path)
             else:
-                st.error("Local model not found at model/fraud_pipeline.pkl")
+                st.error("Local model not found at backend/model/fraud_pipeline.pkl")
                 st.stop()
 
         predictions = []
