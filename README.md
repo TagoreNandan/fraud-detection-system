@@ -74,6 +74,28 @@ Latest comparison results:
 | Random Forest | 0.96 | 0.7551 |
 | XGBoost | 0.97 | 0.8469 |
 
+
+
+## Model Comparison
+
+We benchmarked multiple models:
+
+- Logistic Regression
+- Random Forest
+- XGBoost
+
+Interestingly, Logistic Regression achieved the highest ROC-AUC and fraud recall.
+
+This indicates that the dataset (PCA-transformed features) is largely linearly separable.
+
+Therefore Logistic Regression was selected as the final production model due to:
+
+- Strong performance
+- Lower latency
+- Better interpretability
+- Simpler deployment
+
+
 ## Dashboard Preview
 ![Dashboard Preview](docs/dashboard_preview.png)
 
