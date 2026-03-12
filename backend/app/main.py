@@ -28,6 +28,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup_event():
+    print("Fraud API Started")
     print("Startup: initializing services")
     try:
         # Create the database and table on app startup
