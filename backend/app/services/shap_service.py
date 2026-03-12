@@ -1,11 +1,18 @@
-from pathlib import Path
+import logging
 
-import pandas as pd
+import numpy as np
 import shap
 
 from .model_service import get_pipeline
 
 _explainer = None
+logger = logging.getLogger(__name__)
+
+
+def _build_background_sample() -> np.ndarray:
+    """Create a small synthetic background sample for SHAP."""
+    rng = np.random.default_rng(42)
+    return rng.normal(size=(100, 30))
 
 
 def get_explainer():
@@ -13,9 +20,7 @@ def get_explainer():
     global _explainer
     if _explainer is None:
         pipeline = get_pipeline()
-        root_dir = Path(__file__).resolve().parents[3]
-        background_path = root_dir / "data" / "creditcard.csv"
-        background_df = pd.read_csv(background_path).drop("Class", axis=1)
-        background_sample = background_df.sample(n=min(100, len(background_df)), random_state=42)
+        background_sample = _build_background_sample()
+        logger.info("Creating SHAP explainer with synthetic background sample")
         _explainer = shap.Explainer(pipeline.predict_proba, background_sample)
     return _explainer

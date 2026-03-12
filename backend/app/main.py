@@ -28,15 +28,17 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup_event():
-    # Create the database and table on app startup
-    init_db()
-    # Archive old data and reset counts on each API run
-    reset_transactions(archive=True)
-    # Load the model once so it is ready for prediction requests
-    get_pipeline()
-    logger.info("Model loaded successfully")
-    # Warm the SHAP explainer at startup so it is ready for requests
-    get_explainer()
+    try:
+        # Create the database and table on app startup
+        init_db()
+        # Archive old data and reset counts on each API run
+        reset_transactions(archive=True)
+        # Load the model once so it is ready for prediction requests
+        get_pipeline()
+        # Warm the SHAP explainer at startup so it is ready for requests
+        get_explainer()
+    except Exception:
+        logger.exception("Startup initialization failed; continuing to serve API")
 
 
 app.include_router(predict_router)
