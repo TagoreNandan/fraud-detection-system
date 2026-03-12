@@ -1,5 +1,7 @@
-import pandas as pd
+from pathlib import Path
+
 import joblib
+import pandas as pd
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -12,8 +14,10 @@ from xgboost import XGBClassifier
 # Train an XGBoost pipeline for fraud detection and save it as a single file
 print("Loading dataset...")
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 # Load dataset
-df = pd.read_csv("../data/creditcard.csv")
+df = pd.read_csv(PROJECT_ROOT / "data" / "creditcard.csv")
 
 print("Dataset shape:", df.shape)
 
@@ -78,6 +82,7 @@ print(classification_report(y_test, y_pred))
 # Save pipeline for API and batch prediction usage
 print("\nSaving pipeline...")
 
-joblib.dump(pipeline, "fraud_pipeline.pkl")
+pipeline_path = PROJECT_ROOT / "backend" / "model" / "fraud_pipeline.pkl"
+joblib.dump(pipeline, pipeline_path)
 
-print("Pipeline saved as fraud_pipeline.pkl")
+print(f"Pipeline saved as {pipeline_path}")

@@ -1,0 +1,10 @@
+{
+  "name": "fraud-detection-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Static frontend for the fraud detection system",
+  "scripts": {
+    "lint": "echo \"No frontend build configured\"",
+    "start": "echo \"Open frontend/public/index.html in a browser\""
+  }
+}

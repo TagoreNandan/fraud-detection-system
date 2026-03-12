@@ -1,6 +1,6 @@
 ## System Architecture
 
-The fraud detection platform is built using a microservice architecture where a FastAPI backend serves model predictions and a Streamlit dashboard provides monitoring and visualization.
+The fraud detection platform is built using a microservice architecture where a FastAPI backend serves model predictions and a frontend UI provides monitoring and visualization.
 
 
 graph TD
@@ -15,7 +15,7 @@ D[Prediction + SHAP Explanation]
 
 E[SQLite Database<br/>Transaction Logs]
 
-F[Streamlit Dashboard<br/>Monitoring + Visualization]
+F[Frontend UI<br/>Monitoring + Visualization]
 
 A --> B
 F --> B

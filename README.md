@@ -3,48 +3,20 @@
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688)
 ![XGBoost](https://img.shields.io/badge/XGBoost-ML-orange)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B)
 ![MIT License](https://img.shields.io/badge/License-MIT-green)
 
 ## Overview
-This project predicts fraudulent credit card transactions using a trained XGBoost model. It provides a FastAPI backend for real-time predictions, a Streamlit dashboard for monitoring, SHAP explanations for transparency, and SQLite logging for traceability.
+This project predicts fraudulent credit card transactions using a trained XGBoost model. It provides a FastAPI backend for real-time predictions, SHAP explanations for transparency, and SQLite logging for traceability.
 
 ## Quick Demo
 - Simulate or upload transactions and send them to the API.
 - The model predicts Fraud vs Legitimate in milliseconds.
 - SHAP highlights the top risk-driving features for each prediction.
 - All predictions are stored in SQLite for auditing.
-- Streamlit displays live metrics, trends, and explanations.
+- The frontend displays live metrics, trends, and explanations.
 
 ## System Architecture
-```mermaid
-graph TD
-
-A[Transaction Source
-- Transaction Simulator
-- CSV Upload
-- Manual Input]
-
-B[FastAPI Backend
-/predict endpoint]
-
-C[Fraud Detection Model
-XGBoost Pipeline]
-
-D[Prediction + SHAP Explanation]
-
-E[SQLite Database
-Transaction Logs]
-
-F[Streamlit Dashboard
-Monitoring + Visualization]
-
-A --> B
-F --> B
-B --> C
-C --> D
-D --> E
-E --> F
+See [architecture/system_design.md](architecture/system_design.md) for the latest diagram.
 ```
 
 ## Model Performance
@@ -63,9 +35,10 @@ To compare multiple models fairly, a separate script trains Logistic Regression,
 
 Run the comparison script:
 ```bash
-cd model
-python compare_models.py
+python ml/compare_models.py
 ```
+This saves the ROC chart to reports/roc_comparison.png.
+
 Latest comparison results:
 
 | Model | ROC-AUC | Fraud Recall (Class=1) |
@@ -96,9 +69,6 @@ Therefore Logistic Regression was selected as the final production model due to:
 - Simpler deployment
 
 
-## Dashboard Preview
-![Dashboard Preview](docs/dashboard_preview.png)
-
 ## API Example
 ```bash
 curl -X POST http://127.0.0.1:8000/predict \
@@ -113,33 +83,44 @@ curl -X POST http://127.0.0.1:8000/predict \
 	```
 2. Start the API:
 	```bash
-	cd api
-	uvicorn main:app --reload
-	```
-3. Start the dashboard (new terminal):
-	```bash
-	cd dashboard
-	streamlit run app.py
+	python -m uvicorn backend.app.main:app --reload --port 8000
 	```
 
 ## Project Structure
 ```
 fraud-detection-system
 │
-├── api/                 # FastAPI backend
-│   └── main.py
+├── backend/             # FastAPI service + model artifacts
+│   ├── app/             # API routes, schemas, services, and DB
+│   ├── model/           # Trained pipeline used by the API
+│   ├── requirements.txt # Backend-only dependencies
+│   └── Dockerfile       # Container for API
 │
-├── dashboard/           # Streamlit dashboard
-│   └── app.py
+├── frontend/            # Static web UI assets
+│   ├── public/          # HTML/CSS/JS served by FastAPI
+│   └── src/             # Reserved for future frontend build
 │
-├── model/               # ML training scripts
+├── ml/                  # Training and batch inference scripts
 │   ├── train.py
-│   ├── fraud_pipeline.pkl
+│   ├── batch_predict.py
+│   ├── compare_models.py
+│   └── generate_test_data.py
 │
-├── simulator/           # transaction simulation
+├── data/                # Datasets and synthetic samples
+│   ├── creditcard.csv
+│   └── synthetic_transactions.csv
 │
-├── docs/                # architecture diagrams & screenshots
+├── reports/             # Model evaluation artifacts
+│   └── roc_comparison.png
 │
+├── notebooks/           # Experiments and exploration
+│   └── experimentation.ipynb
+│
+├── architecture/        # System design diagrams
+│   └── system_design.png
+│
+├── docker-compose.yml   # Local container orchestration
+├── .env.example         # Environment variable template
 ├── requirements.txt
 └── README.md
 ```

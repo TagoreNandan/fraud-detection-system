@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import pandas as pd
 
@@ -48,7 +48,8 @@ def build_models(scale_pos_weight):
 
 def main():
     print("Loading dataset...")
-    df = pd.read_csv("../data/creditcard.csv")
+    project_root = Path(__file__).resolve().parents[1]
+    df = pd.read_csv(project_root / "data" / "creditcard.csv")
     print("Dataset shape:", df.shape)
 
     X = df.drop("Class", axis=1)
@@ -105,7 +106,8 @@ def main():
         print(f"{name} Recall: {score:.4f}")
 
     print("\nSaving ROC comparison plot...")
-    os.makedirs("../reports", exist_ok=True)
+    reports_dir = project_root / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
 
     import matplotlib.pyplot as plt
 
@@ -119,10 +121,10 @@ def main():
     plt.ylabel("True Positive Rate")
     plt.legend(loc="lower right")
     plt.tight_layout()
-    plt.savefig("../reports/model_comparison_roc.png", dpi=150)
+    plt.savefig(reports_dir / "roc_comparison.png", dpi=150)
     plt.close()
 
-    print("Saved plot to ../reports/model_comparison_roc.png")
+    print(f"Saved plot to {reports_dir / 'roc_comparison.png'}")
 
 
 if __name__ == "__main__":
