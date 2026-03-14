@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .routes.predict import router as predict_router
-from .services.model_service import get_pipeline
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 FRONTEND_DIR = BASE_DIR / "frontend" / "public"
@@ -19,13 +18,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-def startup_event():
-    print("Fraud API Started")
-    # Load the model once so it is ready for prediction requests
-    get_pipeline()
 
 
 app.include_router(predict_router)

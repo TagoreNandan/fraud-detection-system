@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from ..db.database import get_metrics, get_recent_transactions, reset_transactions, save_transaction
 from ..schemas.transaction import BatchTransaction, Transaction
-from ..services.model_service import get_pipeline
+from ..services.model_service import load_model
 from ..services.shap_service import get_explainer
 
 router = APIRouter()
@@ -15,7 +15,7 @@ def predict(transaction: Transaction):
     """Predict fraud for a single transaction and return SHAP explanations."""
     data = pd.DataFrame([transaction.dict()])
 
-    pipeline = get_pipeline()
+    pipeline = load_model()
     prediction = pipeline.predict(data)[0]
     probability = pipeline.predict_proba(data)[0][1]
 
@@ -81,7 +81,7 @@ def batch_predict(batch: BatchTransaction):
         return {"results": []}
 
     data = pd.DataFrame([t.dict() for t in batch.transactions])
-    pipeline = get_pipeline()
+    pipeline = load_model()
 
     predictions = pipeline.predict(data)
     probabilities = pipeline.predict_proba(data)[:, 1]
