@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter
 
-from ..db.database import get_metrics, get_recent_transactions, reset_transactions, save_transaction
-from ..schemas.transaction import BatchTransaction, Transaction
-from ..services.model_service import load_model
-from ..services.shap_service import get_explainer
+from app.db.database import get_metrics, get_recent_transactions, reset_transactions, save_transaction
+from app.schemas.transaction import BatchTransaction, Transaction
+from app.services.model_service import get_pipeline
+from app.services.shap_service import get_explainer
 
 router = APIRouter()
 
@@ -15,7 +15,9 @@ def predict(transaction: Transaction):
     """Predict fraud for a single transaction and return SHAP explanations."""
     data = pd.DataFrame([transaction.dict()])
 
-    pipeline = load_model()
+    pipeline = get_pipeline()
+    if pipeline is None:
+        return {"error": "Model not available"}
     prediction = pipeline.predict(data)[0]
     probability = pipeline.predict_proba(data)[0][1]
 
@@ -81,7 +83,9 @@ def batch_predict(batch: BatchTransaction):
         return {"results": []}
 
     data = pd.DataFrame([t.dict() for t in batch.transactions])
-    pipeline = load_model()
+    pipeline = get_pipeline()
+    if pipeline is None:
+        return {"error": "Model not available"}
 
     predictions = pipeline.predict(data)
     probabilities = pipeline.predict_proba(data)[:, 1]
