@@ -1,11 +1,12 @@
 import logging
 import os
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import logging
 
-# Lazy loading avoids startup crashes when model files are missing in Railway.
+from fastapi import FastAPI
+
 from app.model_loader import load_model
+from app.schemas.transaction import Transaction
 
 app = FastAPI(title="Fraud Detection API")
 
@@ -13,18 +14,19 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+@app.on_event("startup")
+def startup_event():
+    logger.info("Starting Fraud Detection API")
+    model = load_model()
+    if model is None:
+        logger.warning("Model not available at startup")
+    else:
+        logger.info("Model ready for predictions")
 
 
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "fraud-detection-api"}
+    return {"message": "Fraud Detection API Running"}
 
 
 @app.get("/health")
@@ -33,8 +35,8 @@ def health():
 
 
 @app.post("/predict")
-def predict(payload: dict):
-    # Prediction stays safe if model artifacts are unavailable.
+def predict(payload: Transaction):
+    logger.info("Prediction request received")
     model = load_model()
     if model is None:
         return {"error": "Model not available"}
@@ -42,7 +44,7 @@ def predict(payload: dict):
     try:
         import pandas as pd
 
-        data = pd.DataFrame([payload])
+        data = pd.DataFrame([payload.dict()])
         prediction = model.predict(data)[0]
         proba = model.predict_proba(data)[0][1]
         return {
@@ -52,10 +54,3 @@ def predict(payload: dict):
     except Exception as exc:
         logger.warning("Prediction failed: %s", exc)
         return {"error": "Prediction failed"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
