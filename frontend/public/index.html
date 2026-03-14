@@ -206,23 +206,23 @@
                 <div class="panel-header">
                     <h2>Batch CSV Processing</h2>
                 </div>
-                <p>Upload a CSV file containing <code>Time</code>, <code>Amount</code>, and <code>V1</code> to
-                    <code>V28</code> columns.
-                </p>
+                <p class="batch-description">Upload a CSV file containing Time, Amount, and V1 to V28 columns.</p>
                 <div class="upload-area" id="drop-zone">
                     <i class="ph ph-cloud-arrow-up"></i>
-                    <p>Drag and drop CSV file here or <span>browse</span></p>
+                    <p>Drag and drop CSV file here</p>
+                    <button type="button" class="btn-primary upload-btn">Browse CSV</button>
+                    <p class="upload-hint">Accepted: .csv with Time, Amount, V1-V28</p>
                     <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
                 </div>
 
-                <div id="batch-progress" class="batch-progress" style="display: none;">
+                <div id="batch-progress" class="batch-progress">
                     <p id="batch-status-text">Processing...</p>
                     <div class="progress-bar-bg">
                         <div class="progress-bar-fill" id="batch-progress-fill"></div>
                     </div>
                 </div>
 
-                <div id="batch-results" class="batch-results" style="display: none;">
+                <div id="batch-results" class="batch-results">
                     <h3>Batch Results Summary</h3>
                     <div class="batch-summary-grid">
                         <div class="metric">

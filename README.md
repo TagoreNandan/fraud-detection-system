@@ -143,6 +143,10 @@ fraud-detection-system
 └── README.md
 ```
 
+## 🌐 Deployment
+Architecture flow:
+User → Vercel Frontend → Render FastAPI → ML Model
+
 ## Future Improvements
 - Real-time transaction streaming with Kafka
 - Graph-based fraud detection models
