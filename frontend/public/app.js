@@ -1,7 +1,7 @@
 const API_BASE =
     window.location.hostname === "localhost"
         ? "http://127.0.0.1:8000"
-        : "https://RENDER_BACKEND_URL_HERE";
+        : "https://fraud-detection-system-mgld.onrender.com";
 const API_ROOT = API_BASE;
 
 /**
