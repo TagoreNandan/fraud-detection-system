@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import shap
 
-from app.services.model_service import get_model
+from app.model_loader import load_model
 
 _explainer = None
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ def get_explainer():
     """Create the SHAP explainer once using a small background sample."""
     global _explainer
     if _explainer is None:
-        pipeline = get_model()
+        pipeline = load_model()
         background_sample = _build_background_sample()
         logger.info("Creating SHAP explainer with synthetic background sample")
         _explainer = shap.Explainer(pipeline.predict_proba, background_sample)
