@@ -1,5 +1,6 @@
-import os
 from pathlib import Path
+
+import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +13,8 @@ FRONTEND_DIR = BASE_DIR / "frontend" / "public"
 
 app = FastAPI(title="Fraud Detection API")
 
-PORT = int(os.getenv("PORT", 8000))
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +37,7 @@ app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="fronte
 
 
 if __name__ == "__main__":
+    import os
     import uvicorn
 
     port = int(os.environ.get("PORT", 8000))

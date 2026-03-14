@@ -5,21 +5,15 @@ import joblib
 
 logger = logging.getLogger(__name__)
 
-pipeline = None
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-MODEL_PATH = BASE_DIR / "model" / "fraud_pipeline.pkl"
+model_pipeline = None
 
 
-def get_pipeline():
+def get_model():
     """Load the trained pipeline lazily and reuse it for requests."""
-    global pipeline
-    if pipeline is None:
-        try:
-            pipeline = joblib.load(MODEL_PATH)
-            logger.info("Fraud model pipeline loaded successfully")
-        except Exception as exc:
-            logger.warning("Model not loaded: %s", exc)
-            print("Model not loaded:", exc)
-            pipeline = None
-    return pipeline
+    global model_pipeline
+    if model_pipeline is None:
+        base_dir = Path(__file__).resolve().parent.parent
+        model_path = base_dir / "model" / "fraud_pipeline.pkl"
+        model_pipeline = joblib.load(model_path)
+        logger.info("Fraud model pipeline loaded successfully")
+    return model_pipeline
