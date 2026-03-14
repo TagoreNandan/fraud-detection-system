@@ -12,6 +12,12 @@ creditcard.csv
 # Database
 *.db
 
+# Local tooling
+transactions.db
+.venv/
+node_modules/
+__pycache__/
+
 # Mac
 .DS_Store
 
