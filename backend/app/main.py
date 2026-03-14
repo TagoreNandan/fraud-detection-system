@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -10,6 +11,8 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 FRONTEND_DIR = BASE_DIR / "frontend" / "public"
 
 app = FastAPI(title="Fraud Detection API")
+
+PORT = int(os.getenv("PORT", 8000))
 
 app.add_middleware(
     CORSMiddleware,
