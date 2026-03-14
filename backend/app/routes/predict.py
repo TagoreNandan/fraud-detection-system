@@ -1,19 +1,30 @@
+import logging
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter
 
-from app.db.database import get_metrics, get_recent_transactions, reset_transactions, save_transaction
-from app.schemas.transaction import BatchTransaction, Transaction
-from app.model_loader import load_model
-from app.services.shap_service import get_explainer
+from backend.app.db.database import get_metrics, get_recent_transactions, reset_transactions, save_transaction
+from backend.app.schemas.transaction import BatchTransaction, Transaction
+from backend.app.model_loader import load_model
 
 router = APIRouter()
+
+FEATURE_ORDER = [
+    "Time", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9",
+    "V10", "V11", "V12", "V13", "V14", "V15", "V16", "V17", "V18",
+    "V19", "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27",
+    "V28", "Amount"
+]
+
+logger = logging.getLogger(__name__)
 
 
 @router.post("/predict")
 def predict(transaction: Transaction):
     """Predict fraud for a single transaction and return SHAP explanations."""
-    data = pd.DataFrame([transaction.dict()])
+    logger.info("Prediction request received")
+    data_dict = transaction.dict()
+    data = pd.DataFrame([[data_dict[col] for col in FEATURE_ORDER]], columns=FEATURE_ORDER)
 
     pipeline = load_model()
     if pipeline is None:
@@ -21,28 +32,7 @@ def predict(transaction: Transaction):
     prediction = pipeline.predict(data)[0]
     probability = pipeline.predict_proba(data)[0][1]
 
-    explainer = get_explainer()
-    shap_values = explainer(data)
-    values = shap_values.values
-
-    if values.ndim == 3:
-        values = values[0, :, 1]
-    else:
-        values = values[0]
-
-    feature_names = shap_values.feature_names if shap_values.feature_names is not None else data.columns
-    top_indices = np.argsort(np.abs(values))[::-1][:3]
-    top_risk_factors = []
-
-    for i in top_indices:
-        raw_name = str(feature_names[i])
-        clean_name = raw_name.split("__")[-1]
-        top_risk_factors.append(
-            {
-                "feature": clean_name,
-                "impact": float(abs(values[i]))
-            }
-        )
+    # SHAP disabled for stability.
 
     save_transaction(
         amount=transaction.Amount,
@@ -50,10 +40,12 @@ def predict(transaction: Transaction):
         fraud_probability=float(probability)
     )
 
+    label = "Fraud" if prediction == 1 else "Legitimate"
+    print("Prediction successful")
     return {
-        "prediction": "Fraud" if prediction == 1 else "Legitimate",
+        "prediction": label,
         "fraud_probability": float(probability),
-        "top_risk_factors": top_risk_factors
+        "explanation": "SHAP disabled for stability"
     }
 
 
@@ -82,7 +74,8 @@ def batch_predict(batch: BatchTransaction):
     if not batch.transactions:
         return {"results": []}
 
-    data = pd.DataFrame([t.dict() for t in batch.transactions])
+    data_rows = [[t.dict()[col] for col in FEATURE_ORDER] for t in batch.transactions]
+    data = pd.DataFrame(data_rows, columns=FEATURE_ORDER)
     pipeline = load_model()
     if pipeline is None:
         return {"error": "Model not available"}

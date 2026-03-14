@@ -1,35 +1,39 @@
 import logging
-from pathlib import Path
+import os
 
 import joblib
 
 logger = logging.getLogger(__name__)
 
-MODEL = None
-SCALER = None
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-MODEL_PATH = BASE_DIR / "model" / "model.pkl"
-SCALER_PATH = BASE_DIR / "model" / "scaler.pkl"
+MODEL_CACHE = None
+SCALER_CACHE = None
 
 
 def load_model():
-    """Load model artifacts lazily and reuse them for requests."""
-    global MODEL, SCALER
-    if MODEL is None:
-        try:
-            MODEL = joblib.load(MODEL_PATH)
+    global MODEL_CACHE, SCALER_CACHE
+
+    if MODEL_CACHE is not None:
+        return MODEL_CACHE
+
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    model_dir = os.path.join(base_dir, "model")
+    pipeline_path = os.path.join(model_dir, "fraud_pipeline.pkl")
+    model_path = os.path.join(model_dir, "fraud_model.pkl")
+    scaler_path = os.path.join(model_dir, "scaler.pkl")
+
+    try:
+        if os.path.exists(pipeline_path):
+            MODEL_CACHE = joblib.load(pipeline_path)
             logger.info("Model loaded successfully")
-        except Exception as exc:
-            logger.warning("Model not loaded: %s", exc)
-            MODEL = None
+            return MODEL_CACHE
 
-    if SCALER is None:
-        try:
-            SCALER = joblib.load(SCALER_PATH)
-            logger.info("Scaler loaded successfully")
-        except Exception as exc:
-            logger.warning("Scaler not loaded: %s", exc)
-            SCALER = None
+        if os.path.exists(model_path) and os.path.exists(scaler_path):
+            MODEL_CACHE = joblib.load(model_path)
+            SCALER_CACHE = joblib.load(scaler_path)
+            logger.info("Model loaded successfully")
+            return MODEL_CACHE
 
-    return MODEL
+        raise FileNotFoundError("Model artifacts not found in backend/model")
+    except Exception as exc:
+        logger.error("Model load failed: %s", exc)
+        return None

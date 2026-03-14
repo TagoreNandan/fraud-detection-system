@@ -1,3 +1,6 @@
+const API_BASE = "http://127.0.0.1:8000/predict";
+const API_ROOT = "http://127.0.0.1:8000";
+
 /**
  * Fraud Detection System - Frontend Application Logic
  * 
@@ -164,7 +167,7 @@ function setupPredictionForm() {
         // 3. Send to API
         const startTime = performance.now();
         try {
-            const response = await fetch("/predict", {
+            const response = await fetch(API_BASE, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
@@ -173,6 +176,9 @@ function setupPredictionForm() {
             if (!response.ok) throw new Error("Prediction API failed");
 
             const result = await response.json();
+            if (result.error) {
+                throw new Error(result.error);
+            }
             const latency = (performance.now() - startTime).toFixed(0);
 
             // 4. Render results
@@ -298,7 +304,7 @@ async function runSimulatorTick(simLogsContainer) {
     // 2. Send to API and log result
     const timeStr = new Date().toLocaleTimeString();
     try {
-        const res = await fetch("/predict", {
+        const res = await fetch(API_BASE, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(transaction)
@@ -340,7 +346,7 @@ function appendSimulationLog(container, innerHTML, isAlert) {
 window.loadDashboardData = async () => {
     try {
         // 1. Fetch top-level KPIs
-        const metricsRes = await fetch("/metrics");
+        const metricsRes = await fetch(`${API_ROOT}/metrics`);
         const metrics = await metricsRes.json();
 
         document.getElementById("dash-total").innerText = metrics.total_transactions || 0;
@@ -348,7 +354,7 @@ window.loadDashboardData = async () => {
         document.getElementById("dash-rate").innerText = ((metrics.fraud_rate || 0) * 100).toFixed(2) + "%";
 
         // 2. Fetch the latest transactions for charting and tables
-        const txRes = await fetch("/transactions?limit=100");
+        const txRes = await fetch(`${API_ROOT}/transactions?limit=100`);
         const transactions = await txRes.json();
 
         renderDashboardTable(transactions);
@@ -434,7 +440,7 @@ function initDashboardTab() {
         btnResetDash.addEventListener("click", async () => {
             if (confirm("Are you sure you want to reset all transactions to 0? This cannot be undone.")) {
                 try {
-                    const res = await fetch("/reset", { method: "POST" });
+                    const res = await fetch(`${API_ROOT}/reset`, { method: "POST" });
                     if (res.ok) {
                         alert("Database reset successfully.");
                         window.loadDashboardData();
@@ -559,7 +565,7 @@ async function sendBatchCsvToApi(csvText) {
 
     // 4. Send to backend batch endpoint
     try {
-        const res = await fetch("/batch-predict", {
+        const res = await fetch(`${API_ROOT}/batch-predict`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ transactions })

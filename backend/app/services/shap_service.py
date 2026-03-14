@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import shap
 
-from app.model_loader import load_model
+from backend.app.model_loader import load_model
 
 _explainer = None
 logger = logging.getLogger(__name__)

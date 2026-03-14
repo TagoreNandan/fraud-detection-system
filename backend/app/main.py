@@ -1,56 +1,48 @@
 import logging
 import os
-
-import logging
+import sys
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.model_loader import load_model
-from app.schemas.transaction import Transaction
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-app = FastAPI(title="Fraud Detection API")
+from backend.app.db.database import init_db
+from backend.app.model_loader import load_model
+from backend.app.routes.predict import router
+
+app = FastAPI()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(router)
+
 
 @app.on_event("startup")
-def startup_event():
-    logger.info("Starting Fraud Detection API")
-    model = load_model()
-    if model is None:
-        logger.warning("Model not available at startup")
-    else:
-        logger.info("Model ready for predictions")
+def startup():
+    init_db()
+    print("DB initialised")
+    try:
+        load_model()
+    except Exception as exc:
+        logger.warning("Model not available at startup: %s", exc)
+    logger.info("Server startup complete")
 
 
 @app.get("/")
 def root():
-    return {"message": "Fraud Detection API Running"}
+    return {"status": "Fraud Detection API Running"}
 
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-
-@app.post("/predict")
-def predict(payload: Transaction):
-    logger.info("Prediction request received")
-    model = load_model()
-    if model is None:
-        return {"error": "Model not available"}
-
-    try:
-        import pandas as pd
-
-        data = pd.DataFrame([payload.dict()])
-        prediction = model.predict(data)[0]
-        proba = model.predict_proba(data)[0][1]
-        return {
-            "prediction": "Fraud" if int(prediction) == 1 else "Legitimate",
-            "fraud_probability": float(proba),
-        }
-    except Exception as exc:
-        logger.warning("Prediction failed: %s", exc)
-        return {"error": "Prediction failed"}

@@ -81,6 +81,29 @@ curl -X POST http://127.0.0.1:8000/predict \
 	python -m uvicorn backend.app.main:app --reload --port 8000
 	```
 
+## Local Run (Frontend + Backend)
+1. Install requirements:
+	```bash
+	pip install -r requirements.txt
+	```
+2. Start the backend:
+	```bash
+	bash run_backend.sh
+	```
+3. Start the frontend:
+	```bash
+	bash run_frontend.sh
+	```
+4. Open:
+	```bash
+	http://localhost:5500
+	```
+
+### Reset Database
+```bash
+bash reset_db.sh
+```
+
 ## Project Structure
 ```
 fraud-detection-system
@@ -128,10 +151,3 @@ fraud-detection-system
 - Cloud deployment (AWS / GCP)
 - Real-time fraud alerting system
 
-## Deploy on Railway
-Push to your Git repo and Railway will auto-deploy using the root Procfile.
-
-Procfile entry:
-```
-web: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
-```
