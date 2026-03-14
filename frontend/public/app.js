@@ -1,5 +1,8 @@
-const API_BASE = "http://127.0.0.1:8000/predict";
-const API_ROOT = "http://127.0.0.1:8000";
+const API_BASE =
+    window.location.hostname === "localhost"
+        ? "http://127.0.0.1:8000"
+        : "https://RENDER_BACKEND_URL_HERE";
+const API_ROOT = API_BASE;
 
 /**
  * Fraud Detection System - Frontend Application Logic
@@ -167,7 +170,7 @@ function setupPredictionForm() {
         // 3. Send to API
         const startTime = performance.now();
         try {
-            const response = await fetch(API_BASE, {
+            const response = await fetch(`${API_BASE}/predict`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
@@ -304,7 +307,7 @@ async function runSimulatorTick(simLogsContainer) {
     // 2. Send to API and log result
     const timeStr = new Date().toLocaleTimeString();
     try {
-        const res = await fetch(API_BASE, {
+        const res = await fetch(`${API_BASE}/predict`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(transaction)
@@ -496,79 +499,41 @@ function processUploadedFiles(files) {
         return;
     }
 
-    // Read the file locally via FileReader API
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const csvText = e.target.result;
-        await sendBatchCsvToApi(csvText);
-    };
-    reader.readAsText(file);
+    sendBatchCsvToApi(file);
 }
 
 /**
  * Parses the CSV locally, builds a JSON payload, and sends it to the API 
  * for batch prediction.
  */
-async function sendBatchCsvToApi(csvText) {
+async function sendBatchCsvToApi(file) {
     const batchProgress = document.getElementById("batch-progress");
     const progressFill = document.getElementById("batch-progress-fill");
     const batchResults = document.getElementById("batch-results");
+
+    const downloadButtonId = "batch-download-btn";
+    const summaryGrid = batchResults.querySelector(".batch-summary-grid");
+    let avgMetric = document.getElementById("batch-avg");
+    if (!avgMetric && summaryGrid) {
+        avgMetric = document.createElement("div");
+        avgMetric.className = "metric";
+        avgMetric.innerHTML = "<span class=\"label\">Avg Risk</span><span class=\"value\" id=\"batch-avg\">0</span>";
+        summaryGrid.appendChild(avgMetric);
+    }
 
     // 1. Setup UI for processing
     batchProgress.style.display = 'block';
     batchResults.style.display = 'none';
     progressFill.style.width = '10%';
 
-    // 2. Parse CSV text
-    const rows = csvText.trim().split('\n').map(r => r.split(','));
-    const headers = rows[0].map(h => h.trim());
-
-    // Ensure we have all 30 expected columns (Time, Amount, V1-V28)
-    const reqCols = ['Time', 'Amount'];
-    for (let i = 1; i <= 28; i++) reqCols.push(`V${i}`);
-
-    const indices = {};
-    for (let col of reqCols) {
-        const idx = headers.findIndex(h => h === col);
-        if (idx === -1) {
-            alert(`CSV is missing required column: ${col}`);
-            batchProgress.style.display = 'none';
-            return;
-        }
-        indices[col] = idx;
-    }
-
-    progressFill.style.width = '30%';
-
-    // 3. Build JSON transactions array from CSV rows
-    const transactions = [];
-    for (let i = 1; i < rows.length; i++) {
-        if (rows[i].length !== headers.length) continue; // Skip malformed rows
-
-        const tx = {};
-        for (let col of reqCols) {
-            tx[col] = parseFloat(rows[i][indices[col]]);
-        }
-
-        if (!isNaN(tx.Amount)) {
-            transactions.push(tx);
-        }
-    }
-
-    if (transactions.length === 0) {
-        alert('No valid transactions found in the CSV.');
-        batchProgress.style.display = 'none';
-        return;
-    }
-
-    progressFill.style.width = '60%';
-
-    // 4. Send to backend batch endpoint
+    // 2. Send to backend batch endpoint
     try {
-        const res = await fetch(`${API_ROOT}/batch-predict`, {
+        const formData = new FormData();
+        formData.append("file", file, file.name || "batch.csv");
+
+        const res = await fetch(`${API_BASE}/batch_predict`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ transactions })
+            body: formData
         });
 
         if (!res.ok) throw new Error("Batch Predict Failed");
@@ -579,7 +544,7 @@ async function sendBatchCsvToApi(csvText) {
         // Give the progress bar time to visually complete before rendering
         setTimeout(() => {
             batchProgress.style.display = 'none';
-            renderBatchTable(transactions, data.results);
+            renderBatchSummary(data);
         }, 500);
 
     } catch (err) {
@@ -591,36 +556,51 @@ async function sendBatchCsvToApi(csvText) {
 /**
  * Renders the results of the batch upload into a summary and table
  */
-function renderBatchTable(inputs, results) {
+function renderBatchSummary(summary) {
     document.getElementById("batch-results").style.display = 'block';
-    document.getElementById("batch-total").innerText = inputs.length;
+    document.getElementById("batch-total").innerText = summary.rows_processed || 0;
+    document.getElementById("batch-frauds").innerText = summary.fraud_count || 0;
 
-    let frauds = 0;
-    const tbody = document.querySelector("#batch-results-table tbody");
-    let html = '';
-
-    results.forEach((r, i) => {
-        if (r.prediction === 'Fraud') frauds++;
-
-        // Only render the first 100 to prevent browser freezing on large CSVs
-        if (i < 100) {
-            const isFraud = r.prediction === 'Fraud';
-            html += `
-                <tr>
-                    <td>${i + 1}</td>
-                    <td>₹${inputs[i].Amount.toFixed(2)}</td>
-                    <td><span class="prob-badge ${isFraud ? 'prob-fraud' : 'prob-legit'}">${r.prediction}</span></td>
-                    <td>${(r.fraud_probability * 100).toFixed(2)}%</td>
-                </tr>
-            `;
-        }
-    });
-
-    if (inputs.length > 100) {
-        html += `<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">Showing first 100 results (${inputs.length - 100} more hidden)...</td></tr>`;
+    const avgEl = document.getElementById("batch-avg");
+    if (avgEl) {
+        avgEl.innerText = ((summary.avg_probability || 0) * 100).toFixed(2) + "%";
     }
 
-    document.getElementById("batch-frauds").innerText = frauds;
+    let downloadBtn = document.getElementById("batch-download-btn");
+    if (!downloadBtn) {
+        downloadBtn = document.createElement("button");
+        downloadBtn.id = "batch-download-btn";
+        downloadBtn.className = "btn-ghost";
+        downloadBtn.style.marginTop = "0.75rem";
+        downloadBtn.innerText = "Download Result CSV";
+        document.getElementById("batch-results").prepend(downloadBtn);
+    }
+
+    downloadBtn.onclick = () => {
+        if (summary.filename) {
+            window.open(`${API_ROOT}/download/${summary.filename}`, "_blank");
+        }
+    };
+
+    const tbody = document.querySelector("#batch-results-table tbody");
+    const preview = summary.fraud_preview || [];
+    let html = "";
+
+    preview.slice(0, 5).forEach((row, i) => {
+        html += `
+            <tr>
+                <td>${i + 1}</td>
+                <td>₹${parseFloat(row.Amount || 0).toFixed(2)}</td>
+                <td><span class="prob-badge prob-fraud">Fraud</span></td>
+                <td>${(parseFloat(row.fraud_probability || 0) * 100).toFixed(2)}%</td>
+            </tr>
+        `;
+    });
+
+    if (!html) {
+        html = `<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No fraud rows in preview.</td></tr>`;
+    }
+
     tbody.innerHTML = html;
 }
 

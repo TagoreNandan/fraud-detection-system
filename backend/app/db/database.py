@@ -10,7 +10,7 @@ DB_PATH = DATA_DIR / "transactions.db"
 
 
 def init_db():
-    conn = sqlite3.connect("transactions.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     cursor.execute(

@@ -1,7 +1,11 @@
 import logging
+from datetime import datetime
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from backend.app.db.database import get_metrics, get_recent_transactions, reset_transactions, save_transaction
 from backend.app.schemas.transaction import BatchTransaction, Transaction
@@ -100,3 +104,59 @@ def batch_predict(batch: BatchTransaction):
         })
 
     return {"results": results}
+
+
+@router.post("/batch_predict")
+async def batch_predict_csv(file: UploadFile = File(...)):
+    pipeline = load_model()
+    if pipeline is None:
+        return {"error": "Model not available"}
+
+    try:
+        df = pd.read_csv(file.file)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid CSV file: {exc}")
+
+    required_columns = set(["Time", "Amount"] + [f"V{i}" for i in range(1, 29)])
+    missing = sorted(required_columns - set(df.columns))
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Missing columns: {', '.join(missing)}")
+
+    df = df[FEATURE_ORDER]
+    predictions = pipeline.predict(df)
+    probabilities = pipeline.predict_proba(df)[:, 1]
+
+    df["fraud_prediction"] = ["Fraud" if p == 1 else "Legitimate" for p in predictions]
+    df["fraud_probability"] = probabilities
+    df["risk_band"] = np.where(
+        probabilities < 0.3,
+        "Safe",
+        np.where(probabilities <= 0.7, "Suspicious", "High Risk")
+    )
+
+    output_dir = Path(__file__).resolve().parents[2] / "reports" / "batch_outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"batch_predictions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    output_path = output_dir / filename
+    df.to_csv(output_path, index=False)
+
+    fraud_count = int((df["fraud_prediction"] == "Fraud").sum())
+    avg_probability = float(probabilities.mean()) if len(probabilities) else 0.0
+    preview_rows = df[df["fraud_prediction"] == "Fraud"].head(5).to_dict(orient="records")
+
+    return {
+        "rows_processed": int(len(df)),
+        "fraud_count": fraud_count,
+        "avg_probability": avg_probability,
+        "filename": filename,
+        "fraud_preview": preview_rows,
+    }
+
+
+@router.get("/download/{filename}")
+def download_batch_output(filename: str):
+    output_dir = Path(__file__).resolve().parents[2] / "reports" / "batch_outputs"
+    file_path = output_dir / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(path=file_path, filename=filename)
