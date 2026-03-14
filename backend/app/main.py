@@ -1,20 +1,17 @@
-from pathlib import Path
-
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
-from app.routes.predict import router as predict_router
-
-BASE_DIR = Path(__file__).resolve().parents[2]
-FRONTEND_DIR = BASE_DIR / "frontend" / "public"
+# Lazy loading avoids startup crashes when model files are missing in Railway.
+from app.model_loader import load_model
 
 app = FastAPI(title="Fraud Detection API")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,19 +22,39 @@ app.add_middleware(
 )
 
 
-app.include_router(predict_router)
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "fraud-detection-api"}
 
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-# Mount frontend at root (MUST BE AT THE END so it doesn't shadow /predict)
-app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+
+@app.post("/predict")
+def predict(payload: dict):
+    # Prediction stays safe if model artifacts are unavailable.
+    model = load_model()
+    if model is None:
+        return {"error": "Model not available"}
+
+    try:
+        import pandas as pd
+
+        data = pd.DataFrame([payload])
+        prediction = model.predict(data)[0]
+        proba = model.predict_proba(data)[0][1]
+        return {
+            "prediction": "Fraud" if int(prediction) == 1 else "Legitimate",
+            "fraud_probability": float(proba),
+        }
+    except Exception as exc:
+        logger.warning("Prediction failed: %s", exc)
+        return {"error": "Prediction failed"}
 
 
 if __name__ == "__main__":
-    import os
     import uvicorn
 
     port = int(os.environ.get("PORT", 8000))
